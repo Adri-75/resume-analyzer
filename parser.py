@@ -19,12 +19,33 @@ def extract_phone(text):
     return match.group() if match else "Not found"
 
 def extract_education(text):
-    degrees = ["bachelor", "master", "phd", "associate"]
+    # List of degree keywords and abbreviations to look for
+    degree_keywords = [
+        "bachelor", "master", "phd", "associate",
+        "b.s", "b.a", "m.s", "m.a", "ph.d", "bs", "ba", "ms", "ma", "doctorate"
+    ]
+    
     found = []
-    for degree in degrees:
-        if degree in text.lower():
-            found.append(degree.title())
-    return found or ["Not found"]
+    # Lowercase text for case-insensitive search
+    lowered = text.lower()
+    
+    # Simple approach: check if any keyword is in text
+    for degree in degree_keywords:
+        # Use word boundaries or dots optional (handle both "b.s" and "bs")
+        pattern = re.compile(r'\b' + degree.replace('.', r'\.?') + r'\b', re.IGNORECASE)
+        if pattern.search(lowered):
+            found.append(degree.upper().replace('.', ''))  # Normalize display
+    
+    if found:
+        return found
+    
+    # If none found, try to extract lines that start with "education"
+    lines = text.splitlines()
+    for line in lines:
+        if 'education' in line.lower():
+            return [line.strip()]
+    
+    return ["Not found"]
 
 def parse_resume(text):
     return {

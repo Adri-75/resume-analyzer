@@ -1,6 +1,6 @@
 import streamlit as st
 import fitz  # PyMuPDF
-from analyzer import compute_match_score, generate_summary
+from analyzer import compute_match_score, generate_summary, highlight_matches
 from parser import parse_resume
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="centered")
@@ -30,10 +30,15 @@ if resume_file and job_file:
 
     job_text = extract_text_from_pdf(job_file)
 
-    st.subheader("🔍 Analyzing...")
+    st.subheader("🔍 Analysis Results:")
 
     match_score = compute_match_score(resume_text, job_text)
     summary_text = generate_summary(resume_text, job_text, match_score)
+
+    highlighted_resume = highlight_matches(resume_text, job_text)
+
+    st.subheader("💡 Skill Matches Highlighted in Resume:")
+    st.markdown(highlighted_resume, unsafe_allow_html=True)
 
     st.metric(label="Match Score", value=f"{match_score}%")
     st.markdown(summary_text)
