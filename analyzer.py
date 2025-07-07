@@ -1,7 +1,13 @@
 from sentence_transformers import SentenceTransformer, util
+from difflib import get_close_matches
 import spacy
 import re
 import unicodedata
+
+SECTION_HEADERS = {
+    "requirements", "responsibilities", "preferred", "skills",
+    "summary", "qualifications", "education"
+}
 
 # Load models once
 model = SentenceTransformer('all-MiniLM-L6-v2')
@@ -52,6 +58,14 @@ def extract_dynamic_concepts(text):
     concepts.update(extract_entities_and_proper_nouns(text))
     return concepts
 
+def deduplicate_phrases(phrases):
+    unique = []
+    for phrase in phrases:
+        if not get_close_matches(phrase, unique, n=1, cutoff=0.85):
+            unique.append(phrase)
+    return unique
+
+
 def generate_summary(resume_text, job_text, score):
     """
     Generates a natural-language summary of the resume-job match.
@@ -70,8 +84,12 @@ def generate_summary(resume_text, job_text, score):
         if len(c.split()) > 1 and c.lower().strip() not in matched_clean
     }
 
-    top_matched = sorted(matched_clean, key=len, reverse=True)[:5]
-    top_missing = sorted(missing_clean, key=len, reverse=True)[:5]
+    top_matched = [c.title() for c in deduplicate_phrases(sorted(matched_clean, key=len, reverse=True)[:5])]
+    filtered_missing = {
+        c for c in missing_clean
+        if not any(h in c.split() for h in SECTION_HEADERS)
+    }
+    top_missing = [c.title() for c in deduplicate_phrases(sorted(filtered_missing, key=len, reverse=True))][:5]
 
     # Fit rating
     if score > 80:
@@ -88,7 +106,8 @@ def generate_summary(resume_text, job_text, score):
 **{status}** — Match Score: {score}%
 
 ✅ **Matched concepts:** {', '.join(top_matched) if top_matched else 'N/A'}  
-⚠️ **Missing concepts:** {', '.join(top_missing) if top_missing else 'None detected'}  
+⚠️ **Missing concepts:**  
+{''.join(f'- {item}\n' for item in top_missing) if top_missing else '- None detected'}
 
 💡 **Recommendation:** {suggestion}
 """
